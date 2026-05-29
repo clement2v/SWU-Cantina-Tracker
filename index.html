@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SWU - Cantina Tracker</title>
+    <!-- Police Sci-Fi Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* Couleurs des Affinités Star Wars */
+        :root {
+            --vigilance: #00d2ff;
+            --commandement: #00ff66;
+            --agressivite: #ff003c;
+            --ruse: #ffcc00;
+            --initiative: #ff9900;
+            --bg-dark: #06080c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* DESIGN "CARTE TACTIQUE / HYPERSPACE" */
+        .player-zone {
+            flex: 1;
+            display: flex;
+            position: relative;
+            background: 
+                radial-gradient(1px 1px at 25px 35px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(1.5px 1.5px at 60px 120px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 150px 50px, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(2px 2px at 220px 180px, rgba(255, 255, 255, 0.5), transparent),
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                radial-gradient(circle at center, rgba(20, 26, 38, 0.85) 0%, rgba(6, 8, 12, 1) 100%);
+            background-size: 250px 250px, 300px 300px, 200px 200px, 350px 350px, 30px 30px, 30px 30px, 100% 100%;
+            transition: box-shadow 0.4s ease;
+        }
+
+        /* EFFET VISUEL DE L'INITIATIVE SUR LA ZONE */
+        .player-zone.has-init::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 3px solid rgba(255, 153, 0, 0.35);
+            box-shadow: inset 0 0 25px rgba(255, 153, 0, 0.15);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #p1 {
+            transform: rotate(180deg);
+        }
+
+        /* BARRE CENTRALE NEUTRE */
+        .middle-bar {
+            height: 45px;
+            background-color: #030508;
+            border-top: 2px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 10;
+        }
+
+        #round-display {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #8a99ad;
+            letter-spacing: 2px;
+        }
+
+        .next-round-btn {
+            background: transparent;
+            border: 1px solid var(--ruse);
+            color: var(--ruse);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 8px rgba(255, 204, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .next-round-btn:active {
+            background: var(--ruse);
+            color: #000;
+            box-shadow: 0 0 15px var(--ruse);
+        }
+
+        /* Écrans internes */
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 15px;
+            z-index: 2;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ÉCRAN DE SÉLECTION */
+        .setup-title {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #8a99ad;
+            text-align: center;
+        }
+
+        .aspect-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 85%;
+            max-width: 320px;
+        }
+
+        .aspect-btn {
+            padding: 18px 10px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .aspect-btn.vig { border-color: var(--vigilance); color: var(--vigilance); text-shadow: 0 0 8px var(--vigilance); }
+        .aspect-btn.com { border-color: var(--commandement); color: var(--commandement); text-shadow: 0 0 8px var(--commandement); }
+        .aspect-btn.agr { border-color: var(--agressivite); color: var(--agressivite); text-shadow: 0 0 8px var(--agressivite); }
+        .aspect-btn.rus { border-color: var(--ruse); color: var(--ruse); text-shadow: 0 0 8px var(--ruse); }
+
+        .aspect-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+
+        /* ÉCRAN DE JEU */
+        .pv-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 35px;
+        }
+
+        .pv-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 16px;
+            border: 2px solid var(--theme-color, #fff);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: inset 0 0 10px var(--theme-color), 0 0 10px var(--theme-color);
+        }
+
+        .pv-btn:active { background: var(--theme-color); }
+
+        .pv-display {
+            font-size: 5.5rem;
+            font-weight: 900;
+            min-width: 120px;
+            text-align: center;
+            text-shadow: 0 0 15px var(--theme-color);
+            transition: color 0.1s;
+        }
+
+        /* BOUTON JETON INITIATIVE */
+        .init-btn {
+            width: 85%;
+            max-width: 260px;
+            padding: 8px 0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            background: rgba(20, 25, 35, 0.6);
+            color: #6b7c96;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .init-btn.active {
+            background: var(--initiative);
+            color: #000000;
+            border-color: var(--initiative);
+            box-shadow: 0 0 15px var(--initiative);
+            text-shadow: none;
+        }
+
+        /* ANIMATIONS */
+        @keyframes pulse-warning {
+            0% { opacity: 1; text-shadow: 0 0 15px var(--theme-color); }
+            50% { opacity: 0.4; text-shadow: 0 0 4px var(--theme-color); }
+            100% { opacity: 1; text-shadow: 0 0 15px var(--theme-color); }
+        }
+
+        @keyframes flash-danger {
+            0% { opacity: 1; text-shadow: 0 0 25px var(--theme-color); color: #fff; }
+            50% { opacity: 0.1; text-shadow: 0 0 2px var(--theme-color); color: var(--theme-color); }
+            100% { opacity: 1; text-shadow: 0 0 25px var(--theme-color); color: #fff; }
+        }
+
+        .pulse-warning { animation: pulse-warning 1.8s infinite ease-in-out; }
+        .flash-danger { animation: flash-danger 0.5s infinite ease-in-out; }
+
+        @keyframes shake-impact {
+            0% { transform: scale(1) translate(0, 0); }
+            20% { transform: scale(0.9) translate(-8px, 4px); color: #ff003c; text-shadow: 0 0 25px #ff003c; }
+            40% { transform: scale(0.9) translate(6px, -4px); color: #ff003c; }
+            60% { transform: scale(0.95) translate(-4px, -2px); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+
+        @keyframes pop-heal {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.25); color: #00ff66; text-shadow: 0 0 30px #00ff66; }
+            100% { transform: scale(1); }
+        }
+
+        .hit-impact { animation: shake-impact 0.22s ease-in-out !important; }
+        .heal-impact { animation: pop-heal 0.22s ease-in-out !important; }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 90%;
+            max-width: 360px;
+        }
+
+        .skill-btn {
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #b5c3d1;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .full-width { grid-column: span 2; }
+
+        .skill-btn.used {
+            border-color: #222;
+            background: rgba(15, 15, 15, 0.8);
+            color: #444;
+            text-decoration: line-through;
+        }
+
+        .skill-btn.deployed {
+            background: rgba(0, 0, 0, 0.2);
+            border-color: var(--theme-color);
+            color: white;
+            box-shadow: inset 0 0 8px var(--theme-color), 0 0 8px var(--theme-color);
+        }
+
+        .reset-btn {
+            background: transparent;
+            border: none;
+            color: #3f4a56;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- ================= JOUEUR 1 (Haut) ================= -->
+        <div id="p1" class="player-zone">
+            <!-- Sélection -->
+            <div id="p1-setup" class="screen">
+                <div class="setup-title">Aspect Adversaire</div>
+                <div class="aspect-grid">
+                    <button class="aspect-btn vig" onclick="initPlayer('p1', 'vigilance')">Vigilance</button>
+                    <button class="aspect-btn com" onclick="initPlayer('p1', 'commandement')">Commandement</button>
+                    <button class="aspect-btn agr" onclick="initPlayer('p1', 'agressivite')">Agressivité</button>
+                    <button class="aspect-btn rus" onclick="initPlayer('p1', 'ruse')">Ruse</button>
+                </div>
+            </div>
+            <!-- Jeu -->
+            <div id="p1-game" class="screen hidden">
+                <div class="pv-container">
+                    <button class="pv-btn" onclick="changePV('p1', -1)">-</button>
+                    <div id="p1-pv" class="pv-display">30</div>
+                    <button class="pv-btn" onclick="changePV('p1', 1)">+</button>
+                </div>
+                <!-- NOUVEAU : Jeton d'Initiative P1 -->
+                <button id="p1-init" class="init-btn" onclick="claimInitiative('p1')">Prendre l'initiative</button>
+                <div class="skills-grid">
+                    <button id="p1-base" class="skill-btn" onclick="cycleBase('p1')">Action Base</button>
+                    <button id="p1-leader-cap" class="skill-btn" onclick="toggleLeaderCap('p1')">Action Leader</button>
+                    <button id="p1-leader" class="skill-btn full-width" onclick="cycleLeader('p1')">Leader : Prêt</button>
+                </div>
+                <button class="reset-btn" onclick="resetPlayer('p1')">Changer d'aspect</button>
+            </div>
+        </div>
+
+        <!-- ================= BARRE CENTRALE NEUTRE ================= -->
+        <div class="middle-bar">
+            <div id="round-display">ROUND 1</div>
+            <button class="next-round-btn" onclick="nextRound()">Next Round ➔</button>
+        </div>
+
+        <!-- ================= JOUEUR 2 (Bas) ================= -->
+        <div id="p2" class="player-zone">
+            <!-- Sélection -->
+            <div id="p2-setup" class="screen">
+                <div class="setup-title">Ton Aspect</div>
+                <div class="aspect-grid">
+                    <button class="aspect-btn vig" onclick="initPlayer('p2', 'vigilance')">Vigilance</button>
+                    <button class="aspect-btn com" onclick="initPlayer('p2', 'commandement')">Commandement</button>
+                    <button class="aspect-btn agr" onclick="initPlayer('p2', 'agressivite')">Agressivité</button>
+                    <button class="aspect-btn rus" onclick="initPlayer('p2', 'ruse')">Ruse</button>
+                </div>
+            </div>
+            <!-- Jeu -->
+            <div id="p2-game" class="screen hidden">
+                <div class="skills-grid">
+                    <button id="p2-base" class="skill-btn" onclick="cycleBase('p2')">Action Base</button>
+                    <button id="p2-leader-cap" class="skill-btn" onclick="toggleLeaderCap('p2')">Action Leader</button>
+                    <button id="p2-leader" class="skill-btn full-width" onclick="cycleLeader('p2')">Leader : Prêt</button>
+                </div>
+                <!-- NOUVEAU : Jeton d'Initiative P2 -->
+                <button id="p2-init" class="init-btn" onclick="claimInitiative('p2')">Prendre l'initiative</button>
+                <div class="pv-container">
+                    <button class="pv-btn" onclick="changePV('p2', -1)">-</button>
+                    <div id="p2-pv" class="pv-display">30</div>
+                    <button class="pv-btn" onclick="changePV('p2', 1)">+</button>
+                </div>
+                <button class="reset-btn" onclick="resetPlayer('p2')">Changer d'aspect</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentRound = 1;
+
+        const gameState = {
+            p1: { pv: 30, baseState: 0, leaderCapUsed: false, leaderState: 0, aspect: '', timeoutId: null },
+            p2: { pv: 30, baseState: 0, leaderCapUsed: false, leaderState: 0, aspect: '', timeoutId: null }
+        };
+
+        function nextRound() {
+            currentRound++;
+            document.getElementById('round-display').innerText = `ROUND ${currentRound}`;
+
+            // Reset Joueur 1
+            if (gameState.p1.baseState === 1) {
+                gameState.p1.baseState = 0;
+                document.getElementById('p1-base').className = "skill-btn";
+                document.getElementById('p1-base').innerText = "Action Base";
+            }
+            gameState.p1.leaderCapUsed = false;
+            document.getElementById('p1-leader-cap').className = "skill-btn";
+            document.getElementById('p1-leader-cap').innerText = "Action Leader";
+
+            // Reset Joueur 2
+            if (gameState.p2.baseState === 1) {
+                gameState.p2.baseState = 0;
+                document.getElementById('p2-base').className = "skill-btn";
+                document.getElementById('p2-base').innerText = "Action Base";
+            }
+            gameState.p2.leaderCapUsed = false;
+            document.getElementById('p2-leader-cap').className = "skill-btn";
+            document.getElementById('p2-leader-cap').innerText = "Action Leader";
+        }
+
+        function initPlayer(player, aspectName) {
+            gameState[player].aspect = aspectName;
+            const zone = document.getElementById(player);
+            zone.style.setProperty('--theme-color', `var(--${aspectName})`);
+            document.getElementById(`${player}-setup`).classList.add('hidden');
+            document.getElementById(`${player}-game`).classList.remove('hidden');
+        }
+
+        function resetPlayer(player) {
+            if (gameState[player].timeoutId) clearTimeout(gameState[player].timeoutId);
+            gameState[player] = { pv: 30, baseState: 0, leaderCapUsed: false, leaderState: 0, aspect: '', timeoutId: null };
+            
+            const zone = document.getElementById(player);
+            zone.classList.remove('has-init');
+
+            const pvDisplay = document.getElementById(`${player}-pv`);
+            pvDisplay.innerText = "30";
+            pvDisplay.className = "pv-display";
+            
+            document.getElementById(`${player}-base`).className = "skill-btn";
+            document.getElementById(`${player}-base`).innerText = "Action Base";
+            document.getElementById(`${player}-leader-cap`).className = "skill-btn";
+            document.getElementById(`${player}-leader-cap`).innerText = "Action Leader";
+            document.getElementById(`${player}-leader`).className = "skill-btn full-width";
+            document.getElementById(`${player}-leader`).innerText = "Leader : Prêt";
+
+            const initBtn = document.getElementById(`${player}-init`);
+            initBtn.className = "init-btn";
+            initBtn.innerText = "Prendre l'initiative";
+
+            document.getElementById(`${player}-game`).classList.add('hidden');
+            document.getElementById(`${player}-setup`).classList.remove('hidden');
+            
+            if (gameState.p1.aspect === '' && gameState.p2.aspect === '') {
+                currentRound = 1;
+                document.getElementById('round-display').innerText = "ROUND 1";
+            }
+        }
+
+        function changePV(player, amount) {
+            gameState[player].pv += amount;
+            if (gameState[player].pv < 0) gameState[player].pv = 0;
+            
+            const pvDisplay = document.getElementById(`${player}-pv`);
+            pvDisplay.innerText = gameState[player].pv;
+
+            if (gameState[player].timeoutId) clearTimeout(gameState[player].timeoutId);
+
+            let statusClass = "pv-display";
+            if (gameState[player].pv <= 5 && gameState[player].pv > 0) {
+                statusClass += " flash-danger";
+            } else if (gameState[player].pv <= 10 && gameState[player].pv > 0) {
+                statusClass += " pulse-warning";
+            }
+
+            if (amount < 0) {
+                pvDisplay.className = `${statusClass} hit-impact`;
+            } else if (amount > 0) {
+                pvDisplay.className = `${statusClass} heal-impact`;
+            }
+
+            gameState[player].timeoutId = setTimeout(() => {
+                let currentStatus = "pv-display";
+                if (gameState[player].pv <= 5 && gameState[player].pv > 0) {
+                    currentStatus += " flash-danger";
+                } else if (gameState[player].pv <= 10 && gameState[player].pv > 0) {
+                    currentStatus += " pulse-warning";
+                }
+                pvDisplay.className = currentStatus;
+            }, 220);
+        }
+
+        // --- NOUVEAUTÉ : GESTION DE L'INITIATIVE ---
+        function claimInitiative(player) {
+            const otherPlayer = (player === 'p1') ? 'p2' : 'p1';
+
+            // Retrait global
+            document.getElementById(otherPlayer).classList.remove('has-init');
+            document.getElementById(`${otherPlayer}-init`).classList.remove('active');
+            document.getElementById(`${otherPlayer}-init`).innerText = "Prendre l'initiative";
+
+            // Attribution au joueur actif
+            document.getElementById(player).classList.add('has-init');
+            document.getElementById(`${player}-init`).classList.add('active');
+            document.getElementById(`${player}-init`).innerText = "Initiative ACTIVE ⚡";
+        }
+
+        function cycleBase(player) {
+            gameState[player].baseState = (gameState[player].baseState + 1) % 3;
+            const btn = document.getElementById(`${player}-base`);
+            
+            if (gameState[player].baseState === 0) {
+                btn.className = "skill-btn";
+                btn.innerText = "Action Base";
+            } else if (gameState[player].baseState === 1) {
+                btn.className = "skill-btn used";
+                btn.innerText = "Base : Fait";
+            } else if (gameState[player].baseState === 2) {
+                btn.className = "skill-btn used";
+                btn.innerText = "Épique : Épuisé";
+            }
+        }
+
+        function toggleLeaderCap(player) {
+            gameState[player].leaderCapUsed = !gameState[player].leaderCapUsed;
+            const btn = document.getElementById(`${player}-leader-cap`);
+            btn.className = gameState[player].leaderCapUsed ? "skill-btn used" : "skill-btn";
+            btn.innerText = gameState[player].leaderCapUsed ? "Leader : Fait" : "Action Leader";
+        }
+
+        function cycleLeader(player) {
+            gameState[player].leaderState = (gameState[player].leaderState + 1) % 3;
+            const btn = document.getElementById(`${player}-leader`);
+            
+            if (gameState[player].leaderState === 0) {
+                btn.className = "skill-btn full-width";
+                btn.innerText = "Leader : Prêt";
+            } else if (gameState[player].leaderState === 1) {
+                btn.className = "skill-btn full-width deployed";
+                btn.innerText = "Leader : Déployé";
+            } else if (gameState[player].leaderState === 2) {
+                btn.className = "skill-btn full-width used";
+                btn.innerText = "Leader : Épuisé";
+            }
+        }
+    </script>
+    <!-- Liaison avec le Manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Script d'activation du mode hors-ligne -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('PWA Active : Mode hors-ligne prêt !'))
+                .catch((err) => console.log('Erreur PWA :', err));
+        }
+    </script>
+</body>
+</html>

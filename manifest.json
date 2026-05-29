@@ -1,0 +1,17 @@
+{
+  "name": "SWU Cantina Tracker",
+  "short_name": "CantinaTracker",
+  "description": "Compteur de points de vie et d'initiative pour Star Wars: Unlimited",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#06080c",
+  "theme_color": "#06080c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/126/126482.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
